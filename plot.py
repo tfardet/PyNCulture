@@ -24,6 +24,8 @@
 
 """ Plotting functions for shapely objects """
 
+from collections.abc import Iterable
+
 import numpy as np
 
 from matplotlib.patches import PathPatch
@@ -67,7 +69,9 @@ def plot_shape(shape, axis=None, m='', mc="#999999", fc="#8888ff",
     '''
     # import
     import matplotlib.pyplot as plt
+
     MultiPolygon = None
+
     try:
         from shapely.geometry import (MultiPolygon, Polygon, LineString,
                                       MultiLineString)
@@ -77,7 +81,9 @@ def plot_shape(shape, axis=None, m='', mc="#999999", fc="#8888ff",
     if axis is None:
         fig, axis = plt.subplots()
 
+    kwargs = kwargs.copy()
     zorder = kwargs.get("zorder", 0)
+
     if "zorder" in kwargs:
         del kwargs["zorder"]
 
@@ -87,11 +93,18 @@ def plot_shape(shape, axis=None, m='', mc="#999999", fc="#8888ff",
             plot_shape(p, axis=axis, m=m, mc=mc, fc=fc, ec=ec, alpha=alpha,
                        brightness=brightness, show=False,
                        show_contour=show_contour, **kwargs)
+    elif isinstance(shape, Iterable):
+        for p in shape:
+            plot_shape(p, axis=axis, m=m, mc=mc, fc=fc, ec=ec, alpha=alpha,
+                       brightness=brightness, show=False,
+                       show_contour=show_contour, **kwargs)
     elif isinstance(shape, Polygon) and shape.exterior.coords:
         if show_contour:
             _plot_coords(axis, shape.exterior, m, mc, ec)
+
             for path in shape.interiors:
                 _plot_coords(axis, path.coords, m, mc, ec)
+
         patch = _make_patch(shape, color=fc, alpha=alpha, zorder=zorder,
                             **kwargs)
         axis.add_patch(patch)
@@ -115,14 +128,14 @@ def plot_shape(shape, axis=None, m='', mc="#999999", fc="#8888ff",
             # plot the areas
             for name, area in shape.areas.items():
                 if name != "default_area":
-                    prop         = _get_prop(area, brightness)
-                    color        = fc
-                    local_alpha  = 0
+                    prop = _get_prop(area, brightness)
+                    color = fc
+                    local_alpha = 0
                     if prop < mean:
-                        color       = "black"
+                        color = "black"
                         local_alpha = alpha * (prop - mean) / (low - mean)
                     elif prop > mean:
-                        color       = "white"
+                        color = "white"
                         local_alpha = alpha * (prop - mean) / (high - mean)
                     # contour
                     _plot_coords(axis, area.exterior, m, mc, ec)
@@ -137,6 +150,8 @@ def plot_shape(shape, axis=None, m='', mc="#999999", fc="#8888ff",
         lines = [shape] if isinstance(shape, LineString) else shape.geoms
         for line in lines:
             _plot_coords(axis, line.coords, m, mc, ec)
+    else:
+        raise ValueError(f"Invalid shape type '{shape.__class__}'")
 
     axis.set_aspect(1)
 
